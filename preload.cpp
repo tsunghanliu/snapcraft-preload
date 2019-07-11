@@ -55,12 +55,14 @@ const std::string LD_PRELOAD = "LD_PRELOAD";
 const std::string LD_LINUX = "/lib/ld-linux.so.2";
 const std::string DEFAULT_VARLIB = "/var/lib";
 const std::string DEFAULT_DEVSHM = "/dev/shm/";
+const std::string DEFAULT_VARRUN = "/dev/shm/";
 
 std::string saved_snapcraft_preload;
 std::string saved_varlib;
 std::string saved_snap_name;
 std::string saved_snap_revision;
 std::string saved_snap_devshm;
+std::string saved_snap_varrun;
 
 std::vector<std::string> saved_ld_preloads;
 
@@ -119,6 +121,7 @@ Initializer::Initializer()
     saved_snap_name = getenv_string ("SNAP_NAME");
     saved_snap_revision = getenv_string ("SNAP_REVISION");
     saved_snap_devshm = DEFAULT_DEVSHM + "snap." + saved_snap_name;
+    saved_snap_varrun = DEFAULT_VARRUN + "snap." + saved_snap_name;
 
     // Pull out each absolute-pathed libsnapcraft-preload.so we find.  Better to
     // accidentally include some other libsnapcraft-preload than not propagate
@@ -196,6 +199,13 @@ redirect_path_full (std::string const& pathname, bool check_parent, bool only_if
     if (str_starts_with (pathname, DEFAULT_DEVSHM) && !str_starts_with (pathname, saved_snap_devshm)) {
         std::string new_pathname = pathname.substr(DEFAULT_DEVSHM.size());
         redirected_pathname = saved_snap_devshm + '.' + new_pathname;
+        string_length_sanitize (redirected_pathname);
+        return redirected_pathname;
+    }
+
+    if (str_starts_with (pathname, DEFAULT_VARRUN) && !str_starts_with (pathname, saved_snap_varrun)) {
+        std::string new_pathname = pathname.substr(DEFAULT_VARRUN.size());
+        redirected_pathname = saved_snap_varrun + '.' + new_pathname;
         string_length_sanitize (redirected_pathname);
         return redirected_pathname;
     }
