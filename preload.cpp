@@ -55,8 +55,8 @@ const std::string LD_PRELOAD = "LD_PRELOAD";
 const std::string LD_LINUX = "/lib/ld-linux.so.2";
 const std::string DEFAULT_VARLIB = "/var/lib";
 const std::string DEFAULT_DEVSHM = "/dev/shm/";
-const std::string DEFAULT_RUN = "/dev/shm/";
-const std::string DEFAULT_VARRUN = "/dev/shm/";
+const std::string DEFAULT_RUN = "/run/";
+const std::string DEFAULT_VARRUN = "/var/run/";
 
 std::string saved_snapcraft_preload;
 std::string saved_varlib;
