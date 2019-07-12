@@ -573,10 +573,10 @@ mkstemp(char *path)
 		std::cerr << "path: " << path << ", new_path: " << new_path << "\n";
 
 		// path and new_path should have a same length
-		if (strlen(path) == new_path.length())
+		if (strlen(path) >= new_path.length())
 			strcpy(path, new_path.c_str());
 		else
-			std::cerr << "the lengths are not the same\n";
+			std::cerr << "the size of the original path is too small\n";
 	}
 
     return result;
