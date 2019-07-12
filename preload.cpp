@@ -199,22 +199,32 @@ redirect_path_full (std::string const& pathname, bool check_parent, bool only_if
     // snaps allowed path.
     std::string redirected_pathname;
 
+    std::cerr << "snapcraft-preload: path '" << pathname << "'.\n";
     if (str_starts_with (pathname, DEFAULT_DEVSHM) && !str_starts_with (pathname, saved_snap_devshm)) {
+		std::cerr << "rule: DEVSHM\n";
         std::string new_pathname = pathname.substr(DEFAULT_DEVSHM.size());
+		if (new_pathname[0] == '/')
+			new_pathname.erase(0, 1);	// if the first character is still '/', remove it
         redirected_pathname = saved_snap_devshm + '.' + new_pathname;
         string_length_sanitize (redirected_pathname);
         return redirected_pathname;
     }
 
     if (str_starts_with (pathname, DEFAULT_RUN) && !str_starts_with (pathname, saved_snap_run)) {
+		std::cerr << "rule: RUN\n";
         std::string new_pathname = pathname.substr(DEFAULT_RUN.size());
+		if (new_pathname[0] == '/')
+			new_pathname.erase(0, 1);	// if the first character is still '/', remove it
         redirected_pathname = saved_snap_run + '/' + new_pathname;
         string_length_sanitize (redirected_pathname);
         return redirected_pathname;
     }
 
     if (str_starts_with (pathname, DEFAULT_VARRUN) && !str_starts_with (pathname, saved_snap_varrun)) {
+		std::cerr << "rule: VARRUN\n";
         std::string new_pathname = pathname.substr(DEFAULT_VARRUN.size());
+		if (new_pathname[0] == '/')
+			new_pathname.erase(0, 1);	// if the first character is still '/', remove it
         redirected_pathname = saved_snap_varrun + '/' + new_pathname;
         string_length_sanitize (redirected_pathname);
         return redirected_pathname;
