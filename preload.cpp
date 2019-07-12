@@ -56,7 +56,9 @@ const std::string LD_LINUX = "/lib/ld-linux.so.2";
 const std::string DEFAULT_VARLIB = "/var/lib";
 const std::string DEFAULT_DEVSHM = "/dev/shm/";
 const std::string DEFAULT_RUN = "/run/";
+const std::string DEFAULT_RUNUSER = "/run/user/";
 const std::string DEFAULT_VARRUN = "/var/run/";
+const std::string DEFAULT_VARRUNUSER = "/var/run/user/";
 
 std::string saved_snapcraft_preload;
 std::string saved_varlib;
@@ -210,7 +212,9 @@ redirect_path_full (std::string const& pathname, bool check_parent, bool only_if
         return redirected_pathname;
     }
 
-    if (str_starts_with (pathname, DEFAULT_RUN) && !str_starts_with (pathname, saved_snap_run)) {
+	// TODO: fix the path of /run/user/[uid]/
+    if (str_starts_with (pathname, DEFAULT_RUN) && !str_starts_with (pathname, DEFAULT_RUNUSER)
+			&& !str_starts_with (pathname, saved_snap_run)) {
 		std::cerr << "rule: RUN\n";
         std::string new_pathname = pathname.substr(DEFAULT_RUN.size());
 		if (new_pathname[0] == '/')
@@ -220,7 +224,8 @@ redirect_path_full (std::string const& pathname, bool check_parent, bool only_if
         return redirected_pathname;
     }
 
-    if (str_starts_with (pathname, DEFAULT_VARRUN) && !str_starts_with (pathname, saved_snap_varrun)) {
+    if (str_starts_with (pathname, DEFAULT_VARRUN) && !str_starts_with (pathname, DEFAULT_VARRUNUSER)
+			&& !str_starts_with (pathname, saved_snap_varrun)) {
 		std::cerr << "rule: VARRUN\n";
         std::string new_pathname = pathname.substr(DEFAULT_VARRUN.size());
 		if (new_pathname[0] == '/')
@@ -520,6 +525,61 @@ connect (int sockfd, const struct sockaddr *addr, socklen_t addrlen)
         (decltype(_connect)) dlsym (RTLD_NEXT, "connect");
 
     return socket_action (_connect, sockfd, addr, addrlen);
+}
+
+inline bool
+erase_substr(std::string& str, std::string const& substr)
+{
+	size_t pos = str.find(substr);
+
+	if (pos != std::string::npos)
+	{
+		str.erase(pos, substr.length());
+		return true;
+	}
+
+	return false;
+}
+
+extern "C" int
+mkstemp(char *path)
+{
+	using mkstemp_t = int (*) (char *);
+
+	static mkstemp_t _mkstemp =
+		(decltype(_mkstemp)) dlsym (RTLD_NEXT, "mkstemp");
+
+	std::string new_path = redirect_path (path);
+
+	char c_str[new_path.size() + 1];
+	new_path.copy(c_str, new_path.size() + 1);
+	c_str[new_path.size()] = '\0';
+
+	int result = _mkstemp(c_str);
+
+	std::cerr << "c_str: " << c_str << ", new_path: " << new_path << "\n";
+	if (new_path.compare(c_str)) {
+		new_path = c_str;
+
+		// remove possible patterns of redirection from the filename
+		do {
+			if (erase_substr(new_path, std::string("snap." + saved_snap_name + ".")))
+				break;
+			if (erase_substr(new_path, "snap." + saved_snap_name + "/"))
+				break;
+			if (erase_substr(new_path, saved_snapcraft_preload))
+				break;
+		} while (false);
+		std::cerr << "path: " << path << ", new_path: " << new_path << "\n";
+
+		// path and new_path should have a same length
+		if (strlen(path) == new_path.length())
+			strcpy(path, new_path.c_str());
+		else
+			std::cerr << "the lengths are not the same\n";
+	}
+
+    return result;
 }
 
 namespace
