@@ -208,14 +208,14 @@ redirect_path_full (std::string const& pathname, bool check_parent, bool only_if
 
     if (str_starts_with (pathname, DEFAULT_RUN) && !str_starts_with (pathname, saved_snap_run)) {
         std::string new_pathname = pathname.substr(DEFAULT_RUN.size());
-        redirected_pathname = saved_snap_run + '.' + new_pathname;
+        redirected_pathname = saved_snap_run + '/' + new_pathname;
         string_length_sanitize (redirected_pathname);
         return redirected_pathname;
     }
 
     if (str_starts_with (pathname, DEFAULT_VARRUN) && !str_starts_with (pathname, saved_snap_varrun)) {
         std::string new_pathname = pathname.substr(DEFAULT_VARRUN.size());
-        redirected_pathname = saved_snap_varrun + '.' + new_pathname;
+        redirected_pathname = saved_snap_varrun + '/' + new_pathname;
         string_length_sanitize (redirected_pathname);
         return redirected_pathname;
     }
