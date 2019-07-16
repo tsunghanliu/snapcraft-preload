@@ -47,6 +47,11 @@
 
 #define LITERAL_STRLEN(s) (sizeof (s) - 1)
 
+#define LOG_0 (0)
+#define LOG_1 (1)
+#define LOG_2 (2)
+#define LOG_3 (3)
+
 namespace
 {
 const std::string SNAPCRAFT_LIBNAME = SNAPCRAFT_LIBNAME_DEF;
@@ -69,6 +74,8 @@ std::string saved_snap_run;
 std::string saved_snap_varrun;
 
 std::vector<std::string> saved_ld_preloads;
+
+int saved_verbose_level = 0;
 
 int (*_access) (const char *, int) = NULL;
 
@@ -138,6 +145,28 @@ Initializer::Initializer()
             saved_ld_preloads.push_back (p);
         }
     }
+
+	try {
+		saved_verbose_level = std::stoi (getenv_string ("SNAPCRAFT_PRELOAD_VERBOSE"), nullptr, 0);
+	}
+	catch (const std::invalid_argument& e) {
+		saved_verbose_level = 0;
+	}
+	catch (const std::out_of_range& e) {
+		saved_verbose_level = INT_MAX;
+	}
+}
+
+void
+log_msg(int level, const char *s, ...)
+{
+	if (saved_verbose_level >= level) {
+		va_list va;
+		va_start(va, s);
+		fprintf(stderr, "PRELOAD: ");
+		vfprintf(stderr, s, va);
+		va_end(va);
+	}
 }
 
 inline void
@@ -201,9 +230,9 @@ redirect_path_full (std::string const& pathname, bool check_parent, bool only_if
     // snaps allowed path.
     std::string redirected_pathname;
 
-    std::cerr << "snapcraft-preload: path '" << pathname << "'.\n";
+    log_msg(LOG_1, "%s: path '%s'.\n", __func__, pathname.c_str());
     if (str_starts_with (pathname, DEFAULT_DEVSHM) && !str_starts_with (pathname, saved_snap_devshm)) {
-		std::cerr << "rule: DEVSHM\n";
+		log_msg(LOG_2, "rule: DEVSHM\n");
         std::string new_pathname = pathname.substr(DEFAULT_DEVSHM.size());
 		if (new_pathname[0] == '/')
 			new_pathname.erase(0, 1);	// if the first character is still '/', remove it
@@ -215,7 +244,7 @@ redirect_path_full (std::string const& pathname, bool check_parent, bool only_if
 	// TODO: fix the path of /run/user/[uid]/
     if (str_starts_with (pathname, DEFAULT_RUN) && !str_starts_with (pathname, DEFAULT_RUNUSER)
 			&& !str_starts_with (pathname, saved_snap_run)) {
-		std::cerr << "rule: RUN\n";
+		log_msg(LOG_2, "rule: RUN\n");
         std::string new_pathname = pathname.substr(DEFAULT_RUN.size());
 		if (new_pathname[0] == '/')
 			new_pathname.erase(0, 1);	// if the first character is still '/', remove it
@@ -226,7 +255,7 @@ redirect_path_full (std::string const& pathname, bool check_parent, bool only_if
 
     if (str_starts_with (pathname, DEFAULT_VARRUN) && !str_starts_with (pathname, DEFAULT_VARRUNUSER)
 			&& !str_starts_with (pathname, saved_snap_varrun)) {
-		std::cerr << "rule: VARRUN\n";
+		log_msg(LOG_2, "rule: VARRUN\n");
         std::string new_pathname = pathname.substr(DEFAULT_VARRUN.size());
 		if (new_pathname[0] == '/')
 			new_pathname.erase(0, 1);	// if the first character is still '/', remove it
@@ -557,7 +586,7 @@ mkstemp(char *path)
 
 	int result = _mkstemp(c_str);
 
-	std::cerr << "c_str: " << c_str << ", new_path: " << new_path << "\n";
+	log_msg(LOG_1, "c_str: %s, new_path: %s\n", c_str, new_path.c_str());
 	if (new_path.compare(c_str)) {
 		new_path = c_str;
 
@@ -570,13 +599,13 @@ mkstemp(char *path)
 			if (erase_substr(new_path, saved_snapcraft_preload))
 				break;
 		} while (false);
-		std::cerr << "path: " << path << ", new_path: " << new_path << "\n";
+		log_msg(LOG_3, "path: %s, new_path: %s\n", path, new_path.c_str());
 
 		// path and new_path should have a same length
 		if (strlen(path) >= new_path.length())
 			strcpy(path, new_path.c_str());
 		else
-			std::cerr << "the size of the original path is too small\n";
+			log_msg(LOG_0, "the size of the original path is too small\n");
 	}
 
     return result;
